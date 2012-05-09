@@ -27,3 +27,7 @@ staging:
 
 cucumber:
   <<: *TEST
+
+production:
+  <<: *default
+  database: allourideas_production
