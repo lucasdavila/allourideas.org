@@ -1,9 +1,9 @@
-unless Rails.env == "development" || Rails.env == "test"
+unless ["development", "test", "cucumber"].include? Rails.env
    include SendGrid
 end
 class ClearanceMailer < ActionMailer::Base
 
-  def change_password(user, photocracy)
+  def change_password(user, photocracy=false)
     default_url_options[:host] = (photocracy ? PHOTOCRACY_HOST : HOST)
 
     from_address = photocracy ? "info@photocracy.org" : "info@allourideas.org"

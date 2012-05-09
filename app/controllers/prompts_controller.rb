@@ -23,12 +23,21 @@ class PromptsController < ApplicationController
 					          :ideas => next_prompt['visitor_ideas'].to_i, :ab_test_name => ab_test_name)
 
       result = {
-        :newleft           => truncate(next_prompt['left_choice_text'], {:length => 137}),
-        :newright          => truncate(next_prompt['right_choice_text'], {:length => 137}),
+        :newleft           => CGI::escapeHTML(truncate(next_prompt['left_choice_text'], :length => 140, :omission => '…')),
+        :newright          => CGI::escapeHTML(truncate(next_prompt['right_choice_text'], :length => 140, :omission => '…')),
         :appearance_lookup => next_prompt['appearance_id'],
         :prompt_id         => next_prompt['id'],
         :leveling_message  => leveling_message,
       }
+
+      if wikipedia?
+        # wikipedia ideas are prepended by a 4 character integer
+        # that represents their image id
+        result[:left_image_id] = CGI::escapeHTML(next_prompt['left_choice_text'].split('-',2)[0])
+        result[:right_image_id] = CGI::escapeHTML(next_prompt['right_choice_text'].split('-',2)[0])
+        result[:newleft] = CGI::escapeHTML(truncate(next_prompt['left_choice_text'].split('-',2)[1], :length => 140, :omission => '…')).gsub("\n","<br />")
+        result[:newright] = CGI::escapeHTML(truncate(next_prompt['right_choice_text'].split('-',2)[1], :length => 140, :omission => '…')).gsub("\n","<br />")
+      end
 
       result = add_photocracy_info(result, next_prompt, params[:question_id]) if @photocracy
       render :json => result.to_json
@@ -55,13 +64,22 @@ class PromptsController < ApplicationController
 					          :ideas => next_prompt['visitor_ideas'].to_i, :ab_test_name => ab_test_name)
 
       result = {
-        :newleft           => truncate(next_prompt['left_choice_text'], {:length => 137}),
-        :newright          => truncate(next_prompt['right_choice_text'], {:length => 137}),
+        :newleft           => CGI::escapeHTML(truncate(next_prompt['left_choice_text'], :length => 140, :omission => '…')),
+        :newright          => CGI::escapeHTML(truncate(next_prompt['right_choice_text'], :length => 140, :omission => '…')),
         :appearance_lookup => next_prompt['appearance_id'],
         :prompt_id         => next_prompt['id'],
         :leveling_message  => leveling_message,
         :message => t('vote.cant_decide_message')
       }
+
+      if wikipedia?
+        # wikipedia ideas are prepended by a 4 character integer
+        # that represents their image id
+        result[:left_image_id] = CGI::escapeHTML(next_prompt['left_choice_text'].split('-',2)[0])
+        result[:right_image_id] = CGI::escapeHTML(next_prompt['right_choice_text'].split('-',2)[0])
+        result[:newleft] = CGI::escapeHTML(truncate(next_prompt['left_choice_text'].split('-',2)[1], :length => 140, :omission => '…')).gsub("\n","<br />")
+        result[:newright] = CGI::escapeHTML(truncate(next_prompt['right_choice_text'].split('-',2)[1], :length => 140, :omission => '…')).gsub("\n","<br />")
+      end
 
       result = add_photocracy_info(result, next_prompt, params[:question_id]) if @photocracy
       render :json => result.to_json
@@ -90,7 +108,7 @@ class PromptsController < ApplicationController
 
     new_choice = Crack::XML.parse(c.body)['choice']
     flag_choice_success = (c.code == "201" && new_choice['active'] == false)
-    IdeaMailer.send_later :deliver_flag_notification, @earl, new_choice["id"], new_choice["data"], reason, @photocracy
+    IdeaMailer.delay.deliver_flag_notification(@earl, new_choice["id"], new_choice["data"], reason, @photocracy)
 
     begin
       skip = @prompt.post(:skip, :question_id => question_id,
@@ -110,8 +128,8 @@ class PromptsController < ApplicationController
 					          :ideas => next_prompt['visitor_ideas'].to_i, :ab_test_name => ab_test_name)
 
       result = {
-        :newleft           => truncate(next_prompt['left_choice_text'], {:length => 137}),
-        :newright          => truncate(next_prompt['right_choice_text'], {:length => 137}),
+        :newleft           => CGI::escapeHTML(truncate(next_prompt['left_choice_text'], :length => 140, :omission => '…')),
+        :newright          => CGI::escapeHTML(truncate(next_prompt['right_choice_text'], :length => 140, :omission => '…')),
         :appearance_lookup => next_prompt['appearance_id'],
         :prompt_id         => next_prompt['id'],
         :leveling_message  => leveling_message,
@@ -124,6 +142,11 @@ class PromptsController < ApplicationController
       render :json => {:error => "Flag of choice failed",
       :redirect => url_for(:controller => :home, :action => :index )}.to_json
     end
+  end
+
+  def load_wikipedia_marketplace
+    result = switch_wikipedia_marketplace(params[:question_id])
+    render :json => result.to_json
   end
 
   private
@@ -171,6 +194,9 @@ class PromptsController < ApplicationController
  
      end
 
+      if wikipedia?
+        options.merge!({:force_invalid_vote => true})
+      end
      options
   end
 

@@ -1,9 +1,8 @@
 class EarlsController < ApplicationController
   #caches_page :show
   include ActionView::Helpers::TextHelper
+  include ActionView::Helpers::AssetTagHelper
   require 'fastercsv'
-  
-  
   before_filter :dumb_cleartext_authentication, :except => :export_list
 
   def show
@@ -57,19 +56,19 @@ class EarlsController < ApplicationController
 
        if @photocracy
           if params[:crossfade]
-            @vote_crossfade_transition = eval(params[:crossfade]) rescue true
+            @vote_crossfade_transition = params[:crossfade] == 'true'
 	    if params[:crossfade_time]
 	       @crossfade_time = params[:crossfade_time]
 	    end
           else
 	    crossfade_treatments = ["true_250", "true_500", "true_750", "false_250", "false_500", "false_750"]
 	    crossfade, time = ab_test("#{@earl.name}_#{@earl.question_id}_vote_faster_crossfade_and_time_transition", crossfade_treatments, :conversion => "voted").split("_")
-            @vote_crossfade_transition = eval(crossfade) 
+            @vote_crossfade_transition = crossfade == 'true'
 	    @crossfade_time = time
           end
 
 	  if params[:show_average_votes]
-            @show_average_votes = eval(params[:crossfade]) rescue true
+            @show_average_votes = params[:crossfade] == 'true'
 	  else
 	    @show_average_votes = ab_test("#{@earl.name}_#{@earl.question_id}_show_average_votes", [false, true], :conversion => "voted")
 	  end
@@ -146,7 +145,31 @@ class EarlsController < ApplicationController
        end
        @ab_test_name = (params[:id] == 'studentgovernment') ? "studgov_test_size_of_X_votes_on_Y_ideas2" : 
        								"#{@earl.name}_#{@earl.question_id}_test_size_of_X_votes_on_Y_ideas"	       
-       @ab_test_ideas_text_name = "#{@earl.name}_#{@earl.question_id}_test_contents_of_add_idea_button"	       
+       @ab_test_ideas_text_name = "#{@earl.name}_#{@earl.question_id}_test_contents_of_add_idea_button"
+
+      if wikipedia?
+        # wikipedia ideas are prepended by a 4 character integer
+        # that represents their image id
+        @left_image_id = @left_choice_text.split('-',2)[0]
+        @right_image_id = @right_choice_text.split('-',2)[0]
+        @left_choice_text = @left_choice_text.split('-',2)[1]
+        @right_choice_text = @right_choice_text.split('-',2)[1]
+        @images = {}
+        image_dir = "public/images/wikipedia/ad/"
+        fullsize_image_paths = Dir.glob("#{image_dir}[0-9][0-9][0-9][0-9].png").map{|i| i.sub(/^public/, '') }
+        thumbnail_image_paths = Dir.glob("#{image_dir}[0-9][0-9][0-9][0-9]-thumb.png").map{|i| i.sub(/^public/, '') }
+        @fullsize_images = {}
+        fullsize_image_paths.each do |image|
+          @fullsize_images[File.basename(image, '.png')] = image_path(image)
+        end
+        @thumbnail_images = {}
+        thumbnail_image_paths.each do |image|
+          @thumbnail_images[File.basename(image, '-thumb.png')] = image_path(image)
+        end
+      
+        
+        render(:template => 'wikipedia/earls_show', :layout => '/wikipedia/layout') && return
+      end
     else
       redirect_to('/') and return
     end
@@ -215,7 +238,6 @@ class EarlsController < ApplicationController
       end
     end
   end
-  
 end
 
 # @question = Question.find_by_name(params[:id]) #the question has a prompt id with it

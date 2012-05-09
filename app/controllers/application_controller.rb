@@ -74,7 +74,6 @@ class ApplicationController < ActionController::Base
     end
 
     visitor = Visitor.find_or_create_by_remember_token(:remember_token => visitor_remember_token)
-
     user_session = SessionInfo.find_or_create_by_session_id(:session_id => request.session_options[:id], 
 						       :ip_addr => request.remote_ip,
 						       :user_agent => request.env["HTTP_USER_AGENT"],
@@ -180,4 +179,13 @@ class ApplicationController < ActionController::Base
     render :template => "errors/500.html.haml", :status => 500
   end
 
+  helper_method :wikipedia?
+  def wikipedia?
+    if @earl
+      @earl.name == 'wikipedia-banner-challenge'
+    elsif controller_name == 'questions' && params[:id]
+      e = Earl.find_by_name('wikipedia-banner-challenge')
+      !e.blank? && e.question_id == params[:id].to_i
+    end
+  end
 end

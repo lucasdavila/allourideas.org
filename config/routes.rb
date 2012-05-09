@@ -43,6 +43,7 @@ ActionController::Routing::Routes.draw do |map|
   map.about '/about', :controller => 'home', :action => 'about'
   map.admin '/admin', :controller => 'home', :action => 'admin'
   map.privacy '/privacy', :controller => 'home', :action => 'privacy'
+  map.privacy_2009_07_06 '/privacy-2009-07-06', :controller => 'home', :action => 'privacy-2009-07-06'
   map.tour '/tour', :controller => 'home', :action => 'tour'
   map.example '/example', :controller => 'home', :action => 'example'
   map.connect '/signup', :controller => 'users', :action => 'new'
@@ -54,11 +55,12 @@ ActionController::Routing::Routes.draw do |map|
   
   map.connect '/export/:name', :controller => 'exports', :action => 'download'
 
+  map.connect '/prompts/load_wikipedia_marketplace', :controller => 'prompts', :action => 'load_wikipedia_marketplace'
+  map.connect '/wikipedia-banner-challenge/gallery', :controller => 'home', :action => 'wikipedia_banner_challenge_gallery'
+
   map.connect '/:id', :controller => 'earls', :action => 'show'
   map.add_photos '/:id/addphotos', :controller => 'questions', :action => 'add_photos'
   map.connect '/:id/:action', :controller => 'questions'
-  
-
   # rake routes
   # http://guides.rubyonrails.org/routing.html
 end

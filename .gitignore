@@ -17,3 +17,6 @@ doc/api
 doc/app
 *~
 .rvmrc
+.bundle
+bin/
+vendor/ruby
